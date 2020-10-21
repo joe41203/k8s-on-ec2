@@ -18,6 +18,7 @@ resource "aws_launch_template" "template" {
   vpc_security_group_ids = [
     aws_security_group.http.id,
     aws_security_group.https.id,
+    aws_security_group.nginx.id,
     aws_security_group.common.id,
     aws_security_group.ssh.id
   ]
