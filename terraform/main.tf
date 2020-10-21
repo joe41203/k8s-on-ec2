@@ -7,13 +7,43 @@ data "template_file" "user_data" {
   template = "${file("./user_data.sh")}"
 }
 
-resource "aws_instance" "k8s_app" {
-  ami                         = "ami-0ce107ae7af2e92b5"
-  instance_type               = "t3.small"
-  key_name                    = aws_key_pair.k8s_app.key_name
-  associate_public_ip_address = true
-  user_data                   = data.template_file.user_data.rendered
-  tags = {
-    Name = "k8s-app"
+resource "aws_launch_template" "template" {
+  name                                 = "k8s-template"
+  ebs_optimized                        = true
+  image_id                             = "ami-0ce107ae7af2e92b5"
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type                        = "t3.small"
+  key_name                             = aws_key_pair.k8s_app.key_name
+  user_data                            = base64encode(data.template_file.user_data.rendered)
+  vpc_security_group_ids = [
+    aws_security_group.http.id,
+    aws_security_group.https.id,
+    aws_security_group.common.id,
+    aws_security_group.ssh.id
+  ]
+
+  monitoring {
+    enabled = false
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "k8s-node"
+    }
+  }
+}
+
+resource "aws_autoscaling_group" "this" {
+  desired_capacity    = 2
+  max_size            = 2
+  min_size            = 2
+  vpc_zone_identifier = module.network.public_subnets
+
+
+  launch_template {
+    id      = aws_launch_template.template.id
+    version = "$Latest"
   }
 }

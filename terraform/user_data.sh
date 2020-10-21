@@ -6,6 +6,10 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 sudo systemctl restart sshd
 
+sudo amazon-linux-extras install nginx1.12 -y
+sudo systemctl enable nginx.service
+sudo systemctl start nginx.service
+
 # リポジトリ追加
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
