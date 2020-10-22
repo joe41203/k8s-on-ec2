@@ -28,6 +28,14 @@ resource "aws_launch_template" "template" {
   monitoring {
     enabled = false
   }
+
+  depends_on = [
+    aws_key_pair.k8s_app,
+    data.template_file.user_data,
+    aws_security_group.common,
+    aws_security_group.nginx,
+    aws_iam_instance_profile.k8s_profile
+  ]
 }
 
 resource "aws_autoscaling_group" "master" {
@@ -48,6 +56,12 @@ resource "aws_autoscaling_group" "master" {
     value               = "k8s-master"
     propagate_at_launch = true
   }
+
+  depends_on = [
+    module.network,
+    aws_lb_target_group.front_end,
+    aws_launch_template.template
+  ]
 }
 
 resource "aws_autoscaling_group" "worker" {
@@ -67,12 +81,19 @@ resource "aws_autoscaling_group" "worker" {
     value               = "k8s-node"
     propagate_at_launch = true
   }
+
+  depends_on = [
+    module.network,
+    aws_launch_template.template
+  ]
 }
 
 
 resource "aws_iam_instance_profile" "k8s_profile" {
   name = "k8s-profile"
   role = aws_iam_role.server_role.name
+
+  depends_on = [aws_iam_role.server_role]
 }
 
 resource "aws_iam_role" "server_role" {
@@ -95,9 +116,11 @@ resource "aws_iam_role" "server_role" {
 }
 EOF
 }
-resource "aws_iam_role_policy_attachment" "admin" {
+resource "aws_iam_role_policy_attachment" "server" {
   role       = aws_iam_role.server_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+
+  depends_on = [aws_iam_role.server_role]
 }
 
 resource "aws_lb" "front_end" {
@@ -107,12 +130,18 @@ resource "aws_lb" "front_end" {
   security_groups = [
     aws_security_group.http.id,
     aws_security_group.https.id,
-    aws_security_group.common.id,
-    aws_security_group.ssh.id
+    aws_security_group.common.id
   ]
 
   subnets                    = module.network.public_subnets
   enable_deletion_protection = false
+
+  depends_on = [
+    aws_security_group.http,
+    aws_security_group.https,
+    aws_security_group.common,
+    module.network
+  ]
 }
 
 resource "aws_lb_listener" "front_end" {
@@ -124,6 +153,11 @@ resource "aws_lb_listener" "front_end" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.front_end.arn
   }
+
+  depends_on = [
+    aws_lb.front_end,
+    aws_lb_target_group.front_end
+  ]
 }
 
 resource "aws_lb_target_group" "front_end" {
@@ -131,4 +165,6 @@ resource "aws_lb_target_group" "front_end" {
   port     = 30020
   protocol = "HTTP"
   vpc_id   = module.network.vpc_id
+
+  depends_on = [module.network]
 }

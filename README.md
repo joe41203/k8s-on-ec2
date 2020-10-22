@@ -40,8 +40,10 @@ ip-10-0-103-81.ap-northeast-1.compute.internal   Ready    <none>   64s    v1.19.
 [ec2-user@ip-10-0-101-96 ~]$
 ```
 
-nginx-ingress-controller
+サンプルアプリを apply
 
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.40.2/deploy/static/provider/aws/deploy.yaml
+$ kubectl apply -f ~/app/k8s/sample-nodeport/
 ```
+
+ロードバランサのエンドポイントを叩くと、ページが閲覧できる
