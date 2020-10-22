@@ -17,7 +17,8 @@ resource "aws_launch_template" "template" {
   user_data                            = base64encode(data.template_file.user_data.rendered)
 
   vpc_security_group_ids = [
-    aws_security_group.common.id
+    aws_security_group.common.id,
+    aws_security_group.nginx.id,
   ]
 
   iam_instance_profile {
@@ -127,7 +128,7 @@ resource "aws_lb_listener" "front_end" {
 
 resource "aws_lb_target_group" "front_end" {
   name     = "k8s-target-group"
-  port     = 80
+  port     = 30020
   protocol = "HTTP"
   vpc_id   = module.network.vpc_id
 }

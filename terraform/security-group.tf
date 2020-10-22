@@ -8,6 +8,11 @@ resource "aws_security_group" "https" {
   vpc_id = module.network.vpc_id
 }
 
+resource "aws_security_group" "nginx" {
+  name   = "k8s-nginx"
+  vpc_id = module.network.vpc_id
+}
+
 resource "aws_security_group" "common" {
   name   = "k8s-common"
   vpc_id = module.network.vpc_id
@@ -43,6 +48,15 @@ resource "aws_security_group_rule" "common_ingress" {
   protocol          = -1
   self              = true
   security_group_id = aws_security_group.common.id
+}
+
+resource "aws_security_group_rule" "nginx_ingress" {
+  type              = "ingress"
+  from_port         = 30020
+  to_port           = 30020
+  protocol          = -1
+  self              = true
+  security_group_id = aws_security_group.nginx.id
 }
 
 resource "aws_security_group_rule" "common_egress" {

@@ -39,3 +39,9 @@ ip-10-0-101-96.ap-northeast-1.compute.internal   Ready    master   111s   v1.19.
 ip-10-0-103-81.ap-northeast-1.compute.internal   Ready    <none>   64s    v1.19.3
 [ec2-user@ip-10-0-101-96 ~]$
 ```
+
+nginx-ingress-controller
+
+```
+$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.40.2/deploy/static/provider/aws/deploy.yaml
+```

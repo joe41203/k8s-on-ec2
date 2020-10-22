@@ -34,3 +34,6 @@ yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 systemctl enable kubelet && systemctl start kubelet
 
 kubeadm config images pull
+
+sudo -u ec2-user mkdir /home/ec2-user/app
+sudo -u ec2-user git clone https://github.com/joe41203/k8s-on-ec2.git /home/ec2-user/app/
