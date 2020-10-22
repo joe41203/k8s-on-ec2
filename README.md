@@ -1,5 +1,11 @@
 2 つのサーバに SSH 後
 
+image pull
+
+```
+$ sudo kubeadm config images pull
+```
+
 master
 
 ```

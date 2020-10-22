@@ -15,36 +15,119 @@ resource "aws_launch_template" "template" {
   instance_type                        = "t3.small"
   key_name                             = aws_key_pair.k8s_app.key_name
   user_data                            = base64encode(data.template_file.user_data.rendered)
+
   vpc_security_group_ids = [
-    aws_security_group.http.id,
-    aws_security_group.https.id,
-    aws_security_group.nginx.id,
-    aws_security_group.common.id,
-    aws_security_group.ssh.id
+    aws_security_group.common.id
   ]
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.k8s_profile.name
+  }
 
   monitoring {
     enabled = false
   }
-
-  tag_specifications {
-    resource_type = "instance"
-
-    tags = {
-      Name = "k8s-node"
-    }
-  }
 }
 
-resource "aws_autoscaling_group" "this" {
-  desired_capacity    = 2
-  max_size            = 2
-  min_size            = 2
-  vpc_zone_identifier = module.network.public_subnets
-
+resource "aws_autoscaling_group" "master" {
+  name                = "k8s-master"
+  desired_capacity    = 1
+  max_size            = 1
+  min_size            = 1
+  vpc_zone_identifier = module.network.private_subnets
+  target_group_arns   = [aws_lb_target_group.front_end.arn]
 
   launch_template {
     id      = aws_launch_template.template.id
     version = "$Latest"
   }
+
+  tag {
+    key                 = "Name"
+    value               = "k8s-master"
+    propagate_at_launch = true
+  }
+}
+
+resource "aws_autoscaling_group" "worker" {
+  name                = "k8s-node"
+  desired_capacity    = 1
+  max_size            = 1
+  min_size            = 1
+  vpc_zone_identifier = module.network.private_subnets
+
+  launch_template {
+    id      = aws_launch_template.template.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "k8s-node"
+    propagate_at_launch = true
+  }
+}
+
+
+resource "aws_iam_instance_profile" "k8s_profile" {
+  name = "k8s-profile"
+  role = aws_iam_role.server_role.name
+}
+
+resource "aws_iam_role" "server_role" {
+  name = "test_role"
+  path = "/"
+
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+               "Service": "ec2.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+        }
+    ]
+}
+EOF
+}
+resource "aws_iam_role_policy_attachment" "admin" {
+  role       = aws_iam_role.server_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+resource "aws_lb" "front_end" {
+  name               = "k8s-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups = [
+    aws_security_group.http.id,
+    aws_security_group.https.id,
+    aws_security_group.common.id,
+    aws_security_group.ssh.id
+  ]
+
+  subnets                    = module.network.public_subnets
+  enable_deletion_protection = false
+}
+
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = aws_lb.front_end.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.front_end.arn
+  }
+}
+
+resource "aws_lb_target_group" "front_end" {
+  name     = "k8s-target-group"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = module.network.vpc_id
 }

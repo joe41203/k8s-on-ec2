@@ -10,6 +10,10 @@ sudo amazon-linux-extras install nginx1.12 -y
 sudo systemctl enable nginx.service
 sudo systemctl start nginx.service
 
+sudo yum install -y https://s3.region.amazonaws.com/amazon-ssm-region/latest/linux_amd64/amazon-ssm-agent.rpm
+sudo systemctl enable amazon-ssm-agent
+sudo systemctl start amazon-ssm-agent
+
 # リポジトリ追加
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
@@ -28,3 +32,5 @@ sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 
 yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 systemctl enable kubelet && systemctl start kubelet
+
+kubeadm config images pull
